@@ -2,11 +2,13 @@
 
 A redis client wrapper to support cluster connections.
 
+The cluster instance can be used as a drop-in replacement for the regular node\_redis client.
+
 ## Install
 
     npm install redis-party
 
-### Example
+## Example
 
 ```javascript
 var nodes = [
@@ -42,8 +44,6 @@ var c = new Cluster(nodes, {"max_attempts": 5}, function (err) {
     });
 });
 ```
-
-The cluster instance can be used as a drop-in replacement for the regular node\_redis client.
 
 ## API
 
