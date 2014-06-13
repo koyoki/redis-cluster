@@ -1,10 +1,10 @@
-# koyoki-redis-cluster
+# redis-party
 
 A node\_redis client wrapper to support cluster connections.
 
 ## Install
 
-    npm install koyoki-redis-cluster
+    npm install redis-party
 
 ### Example
 
@@ -15,7 +15,7 @@ var nodes = [
     {"host": "node2.domain.com", "port": 10000},
     {"host": "node2.domain.com", "port": 10001},
 ];
-var Cluster = require("koyoki-redis-cluster");
+var Cluster = require("redis-party");
 
 var c = new Cluster(nodes, {"max_attempts": 5}, function (err) {
     c.SET("foo", "bar", function () {
