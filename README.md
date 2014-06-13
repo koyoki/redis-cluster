@@ -50,6 +50,12 @@ client.SET("foo", "bar", function () {
 });
 ```
 
+### Sending Commands
+
+Just like node\_redis, each redis command is exposed as a function on the client object.
+
+All commands except `multi` are passed along to the correct node\_redis client depending on the key hash.
+
 ## API
 
 ### Client Events
@@ -85,6 +91,6 @@ Create a new cluster instance. It will connect to the first available redis node
 
 Returns the slot which will be used for a key.
 
-### client.getConenctionBySlot(slot, callback)
+### client.getConnectionBySlot(slot, callback)
 
 Get the node\_redis instance for a specific slot.
