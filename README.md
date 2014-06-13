@@ -1,6 +1,6 @@
 # redis-party
 
-A node\_redis client wrapper to support cluster connections.
+A redis client wrapper to support cluster connections.
 
 ## Install
 
