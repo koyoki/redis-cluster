@@ -1,13 +1,16 @@
 {
   "name": "redis-party",
-  "version": "1.0.0",
-  "description": "",
+  "version": "1.0.1",
+  "description": "Redis client wrapper for clusters",
   "main": "index.js",
   "scripts": {
     "test": "mocha --reporter spec"
   },
-  "author": "",
-  "repository": "none",
+  "author": "Koyoki",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/koyoki/redis-party.git"
+  },
   "license": "BSD",
   "dependencies": {
     "redis": "~0.10.3"
