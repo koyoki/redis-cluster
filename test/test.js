@@ -2,24 +2,26 @@
 var expect = require("expect.js");
 var cluster = require("../index.js");
 
+var host = process.env.HOST;
+var port = process.env.PORT;
 var nodes = [
-    {"host": process.env.HOST, "port": process.env.PORT},
+    {"host": host, "port": port},
 ];
 
 var redisOptions = {
-    "max_attempts": 5
+    "max_attempts": 1
 };
 
 describe("Cluster", function () {
     it("should return error if there are no cluster nodes", function (done) {
-        new cluster([], {}, function (err) {
+        cluster.createClient(null, null, redisOptions, function (err) {
             expect(err).to.be.an(Error);
             done();
         });
     });
 
     it("should handle key hash tags correctly", function () {
-        var c = new cluster([], {});
+        var c = new cluster.Cluster([], {});
         var slot = c.getSlot("123456789");
 
         expect(c.getSlot("{123456789}test")).to.be(slot);
@@ -29,8 +31,16 @@ describe("Cluster", function () {
         expect(c.getSlot("{}123456789")).not.to.be(slot);
     });
 
+    it("should connect to a cluster with node_redis interface", function (done) {
+        var c = cluster.createClient(port, host, redisOptions, function (err) {
+            expect(err).to.be(null);
+            expect(c).to.be.a(cluster.Cluster);
+            done();
+        });
+    });
+
     it("should connect to a cluster", function (done) {
-        new cluster(nodes, redisOptions, function (err) {
+        var c = new cluster.Cluster(nodes, redisOptions, function (err) {
             expect(err).to.be(null);
             done();
         });
@@ -40,7 +50,7 @@ describe("Cluster", function () {
 describe("Redis Commands", function () {
     var c;
     beforeEach(function (done) {
-        c = new cluster(nodes, redisOptions, done);
+        c = new cluster.Cluster(nodes, redisOptions, done);
     });
 
     describe("single-key", function () {
@@ -51,7 +61,7 @@ describe("Redis Commands", function () {
         });
 
         it("should set and get strings", function (done) {
-            c.sendClusterCommand("SET", "foo", "bar", function (err, res) {
+            c.SET("foo", "bar", function (err, res) {
                 expect(err).to.be(null);
                 expect(res).to.be("OK");
 

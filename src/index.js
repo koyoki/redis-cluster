@@ -256,4 +256,10 @@ RedisCluster.prototype.multi = function () {
     return new Multi(this);
 };
 
-module.exports = RedisCluster;
+exports.createClient = function (port, host, options, callback) {
+    port = port || 6379;
+    host = host || "127.0.0.1";
+    return new RedisCluster([{"host": host, "port": port}], options, callback);
+};
+
+exports.Cluster = RedisCluster;
