@@ -1,3 +1,5 @@
+var util = require("util");
+var events = require("events");
 var redis = require("redis");
 var crc16 = require("./crc16.js");
 var commands = require("./commands.js");
@@ -5,29 +7,35 @@ var Multi = require("./multi.js");
 
 var hashSlots = 16384;
 
-function RedisCluster(nodes, redisOptions, callback) {
+function RedisCluster(nodes, redisOptions) {
+    this.ready = false;
     this.nodes = [];
     for (var i = 0; i < nodes.length; ++i) {
         this.addNode(nodes[i]);
     }
     this.connections = {};
     this.redisOptions = redisOptions;
-    this.initializeSlotsCache(callback);
     this.bindCommands();
+    this.initializeSlotsCache();
+
+    events.EventEmitter.call(this);
 }
+util.inherits(RedisCluster, events.EventEmitter);
 
 RedisCluster.prototype.getRedisLink = function (host, port, callback) {
     //console.log("Connecting to " + host + ":" + port);
+    var self = this;
     var client = redis.createClient(port, host, this.redisOptions);
     client.once("ready", function () {
         client.removeAllListeners("error");
         callback(null, client);
     });
-    client.once("error", function (err) {
+    client.on("error", function (err) {
         var parts = err.message.split(" ");
         if (parts[parts.length - 1] === "ECONNREFUSED") {
             callback(err);
         }
+        self.emit("redis_error", err);
     });
 };
 
@@ -43,22 +51,22 @@ RedisCluster.prototype.addNode = function (node) {
     this.nodes.push(node);
 };
 
-RedisCluster.prototype.initializeSlotsCache = function (callback) {
+RedisCluster.prototype.initializeSlotsCache = function () {
     this.slots = [];
+    this.ready = false;
+
     var node = this.nodes.shift();
     if (node === undefined) {
-        if (callback) {
-            callback(new Error("Could not connect to cluster"));
-        }
+        this.emit("error", new Error("Could not connect to cluster"));
         return;
     }
 
-    var that = this;
+    var self = this;
     this.getRedisLink(node.host, node.port, function (err, r) {
         if (err) {
             //console.log("Could not connect to redis server " + node.host + ":" + node.port);
-            //console.error(err.stack);
-            that.initializeSlotsCache(callback);
+            //Try again with next node
+            self.initializeSlotsCache();
             return;
         }
 
@@ -66,11 +74,12 @@ RedisCluster.prototype.initializeSlotsCache = function (callback) {
             r.quit();
 
             if (err) {
-                that.initializeSlotsCache(callback);
+                //Try again with next node
+                self.initializeSlotsCache();
                 return;
             }
 
-            that.refreshTable = false;
+            self.refreshTable = false;
             var lines = res.split("\n");
 
             for (var i = 0; i < lines.length; ++i) {
@@ -87,7 +96,7 @@ RedisCluster.prototype.initializeSlotsCache = function (callback) {
                 } else {
                     addr = {"host": parts[0], "port": parts[1]};
                 }
-                that.addNode(addr);
+                self.addNode(addr);
 
                 //Update slot mappings
                 var slots = fields.slice(8);
@@ -101,15 +110,14 @@ RedisCluster.prototype.initializeSlotsCache = function (callback) {
                     var first = parseInt(parts[0], 10);
                     var last = parseInt(parts[1], 10) || first;
                     for (var k = first; k < last; ++k) {
-                        that.slots[k] = addr;
+                        self.slots[k] = addr;
                     }
                 }
             }
 
-            //console.log("Found " + that.nodes.length + " nodes in cluster");
-            if (callback) {
-                callback(null);
-            }
+            //console.log("Found " + self.nodes.length + " nodes in cluster");
+            self.emit("ready");
+            self.ready = true;
         });
     });
 };
@@ -139,7 +147,7 @@ RedisCluster.prototype.getKeyFromCommand = function () {
 };
 
 RedisCluster.prototype.getRandomConnection = function (callback) {
-    var that = this;
+    var self = this;
     var node = this.nodes.shift();
 
     if (node === undefined) {
@@ -150,7 +158,7 @@ RedisCluster.prototype.getRandomConnection = function (callback) {
     this.nodes.push(node);
     this.getConnection(node, function (err, conn) {
         if (err) {
-            that.getRandomConnection(callback);
+            self.getRandomConnection(callback);
             return;
         }
 
@@ -165,10 +173,10 @@ RedisCluster.prototype.getConnectionBySlot = function (slot, callback) {
         return;
     }
 
-    var that = this;
+    var self = this;
     this.getConnection(node, function (err, conn) {
         if (err) {
-            that.getRandomConnection(callback);
+            self.getRandomConnection(callback);
             return;
         }
 
@@ -177,7 +185,7 @@ RedisCluster.prototype.getConnectionBySlot = function (slot, callback) {
 };
 
 RedisCluster.prototype.getConnection = function (node, callback) {
-    var that = this;
+    var self = this;
     var name = node.host + ":" + node.port;
     if (!this.connections[name]) {
         this.getRedisLink(node.host, node.port, function (err, conn) {
@@ -186,7 +194,7 @@ RedisCluster.prototype.getConnection = function (node, callback) {
                 return;
             }
 
-            that.connections[name] = conn;
+            self.connections[name] = conn;
             callback(null, conn);
         });
     } else {
@@ -196,10 +204,11 @@ RedisCluster.prototype.getConnection = function (node, callback) {
 
 RedisCluster.prototype.sendClusterCommand = function () {
     var args = Array.prototype.slice.call(arguments, 0);
-    var that = this;
+    var self = this;
     if (this.refreshTable) {
-        this.initializeSlotsCache(function () {
-            that.sendClusterCommand.apply(that, args);
+        this.initializeSlotsCache();
+        this.once("ready", function () {
+            self.sendClusterCommand.apply(self, args);
         });
         return;
     }
@@ -218,8 +227,8 @@ RedisCluster.prototype.sendClusterCommand = function () {
                 if (err) {
                     var parts = err.toString().split(" ");
                     if (parts[1] === "MOVED" || parts[1] === "ASK") {
-                        that.refreshTable = true;
-                        that.sendClusterCommand.apply(that, args);
+                        self.refreshTable = true;
+                        self.sendClusterCommand.apply(self, args);
                         return;
                     }
                     callback(err);
@@ -235,7 +244,7 @@ RedisCluster.prototype.sendClusterCommand = function () {
 };
 
 RedisCluster.prototype.bindCommands = function () {
-    var that = this;
+    var self = this;
 
     commands.forEach(function (command) {
         if (command === "multi" || command === "exec") {
@@ -245,7 +254,7 @@ RedisCluster.prototype.bindCommands = function () {
         RedisCluster.prototype[command] = function () {
             var args = Array.prototype.slice.call(arguments, 0);
             args.unshift(command);
-            that.sendClusterCommand.apply(that, args);
+            self.sendClusterCommand.apply(self, args);
         };
 
         RedisCluster.prototype[command.toUpperCase()] = RedisCluster.prototype[command];
@@ -256,10 +265,22 @@ RedisCluster.prototype.multi = function () {
     return new Multi(this);
 };
 
-exports.createClient = function (port, host, options, callback) {
+exports.getSlot = function getSlot(key) {
+    var s = key.indexOf("{");
+    if (s !== -1) {
+        var e = key.indexOf("}", s+1);
+        if (e > s+1) {
+            key = key.substring(s+1, e);
+        }
+    }
+    return crc16(key) % hashSlots;
+};
+RedisCluster.prototype.getSlot = exports.getSlot;
+
+exports.createClient = function (port, host, options) {
     port = port || 6379;
     host = host || "127.0.0.1";
-    return new RedisCluster([{"host": host, "port": port}], options, callback);
+    return new RedisCluster([{"host": host, "port": port}], options);
 };
 
 exports.Cluster = RedisCluster;

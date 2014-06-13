@@ -19,7 +19,8 @@ var nodes = [
 ];
 var cluster = require("redis-party");
 
-var c = new cluster.Cluster(nodes, {"max_attempts": 5}, function (err) {
+var c = new cluster.Cluster(nodes, {"max_attempts": 5});
+c.once("ready", function () {
     var multi = c.multi();
     multi.SET("hello", "world");
     multi.GET("hello");
@@ -38,7 +39,7 @@ var c = new cluster.Cluster(nodes, {"max_attempts": 5}, function (err) {
 });
 ```
 
-Optional node\_redis compatible interface:
+Alternative node\_redis compatible interface:
 
 ```javascript
 var client = cluster.createClient(port, host, options);
@@ -50,6 +51,20 @@ client.SET("foo", "bar", function () {
 ```
 
 ## API
+
+### Client Events
+
+#### ready
+
+The client will emit the ready event once the client is connected to the cluster and has populated the slot-node mapping table.
+
+#### error
+
+This client will emit the error event if there is an error with the cluster library.
+
+#### redis\_error
+
+Error events emitted from the node\_redis library.
 
 ### cluster.createClient(port, host, options, [callback])
 

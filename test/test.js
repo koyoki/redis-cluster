@@ -14,34 +14,33 @@ var redisOptions = {
 
 describe("Cluster", function () {
     it("should return error if there are no cluster nodes", function (done) {
-        cluster.createClient(null, null, redisOptions, function (err) {
+        var c = cluster.createClient(null, null, redisOptions);
+        c.once("error", function (err) {
             expect(err).to.be.an(Error);
             done();
         });
     });
 
     it("should handle key hash tags correctly", function () {
-        var c = new cluster.Cluster([], {});
-        var slot = c.getSlot("123456789");
+        var slot = cluster.getSlot("123456789");
 
-        expect(c.getSlot("{123456789}test")).to.be(slot);
-        expect(c.getSlot("test{123456789}")).to.be(slot);
-        expect(c.getSlot("test{123456789}test{abc}")).to.be(slot);
+        expect(cluster.getSlot("{123456789}test")).to.be(slot);
+        expect(cluster.getSlot("test{123456789}")).to.be(slot);
+        expect(cluster.getSlot("test{123456789}test{abc}")).to.be(slot);
 
-        expect(c.getSlot("{}123456789")).not.to.be(slot);
+        expect(cluster.getSlot("{}123456789")).not.to.be(slot);
     });
 
     it("should connect to a cluster with node_redis interface", function (done) {
-        var c = cluster.createClient(port, host, redisOptions, function (err) {
-            expect(err).to.be(null);
-            expect(c).to.be.a(cluster.Cluster);
+        var c = cluster.createClient(port, host, redisOptions);
+        c.once("ready", function () {
             done();
         });
     });
 
     it("should connect to a cluster", function (done) {
-        var c = new cluster.Cluster(nodes, redisOptions, function (err) {
-            expect(err).to.be(null);
+        var c = new cluster.Cluster(nodes, redisOptions);
+        c.once("ready", function () {
             done();
         });
     });
@@ -50,7 +49,8 @@ describe("Cluster", function () {
 describe("Redis Commands", function () {
     var c;
     beforeEach(function (done) {
-        c = new cluster.Cluster(nodes, redisOptions, done);
+        c = new cluster.Cluster(nodes, redisOptions);
+        c.once("ready", done);
     });
 
     describe("single-key", function () {
