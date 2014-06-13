@@ -2,7 +2,7 @@
 
 A redis client wrapper to support cluster connections.
 
-The cluster instance can be used as a drop-in replacement for the regular node\_redis client.
+This library can be used as a drop-in replacement for the regular node\_redis client.
 
 ## Install
 
@@ -26,13 +26,12 @@ c.once("ready", function () {
     multi.GET("hello");
     multi.DEL("hello");
     multi.exec(function (err, res) {
-        console.log("hello = " + res[1]);
+        console.log("hello " + res[1]);
     });
 
-
     var multi2 = c.multi();
-    multi2.SET("key1");
-    multi2.SET("key2");
+    multi2.SET("key1", "val");
+    multi2.SET("key2", "val");
     multi2.exec(function (err, res) {
         //err = Error("Multi comands must operate on the same slot!")
     });
