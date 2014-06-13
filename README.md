@@ -17,16 +17,9 @@ var nodes = [
     {"host": "node2.domain.com", "port": 10000},
     {"host": "node2.domain.com", "port": 10001},
 ];
-var Cluster = require("redis-party");
+var cluster = require("redis-party");
 
-var c = new Cluster(nodes, {"max_attempts": 5}, function (err) {
-    c.SET("foo", "bar", function () {
-        c.GET("foo", "bar", function (err, bar) {
-            console.log("foo = " + bar);
-        });
-    });
-
-
+var c = new cluster.Cluster(nodes, {"max_attempts": 5}, function (err) {
     var multi = c.multi();
     multi.SET("hello", "world");
     multi.GET("hello");
@@ -45,20 +38,38 @@ var c = new Cluster(nodes, {"max_attempts": 5}, function (err) {
 });
 ```
 
+Optional node\_redis compatible interface:
+
+```javascript
+var client = cluster.createClient(port, host, options);
+client.SET("foo", "bar", function () {
+    client.GET("foo", "bar", function (err, bar) {
+        console.log("foo = " + bar);
+    });
+});
+```
+
 ## API
 
-### Cluster(nodes, redisOptions, callback)
+### cluster.createClient(port, host, options, [callback])
+
+Create a new cluster instance. It will connect to the specified redis node and discover the rest of the nodes from there.
+
+* `port` - defaults to `6379`
+* `host` - defaults to `127.0.0.1`
+* `options` - same as node\_redis client options
+
+### cluster.Cluster(nodes, redisOptions, callback)
 
 Create a new cluster instance. It will connect to the first available redis node and discover the rest of the nodes from there.
 
 * `nodes` - an array of objects with `host` and `port` properties.
 * `redisOptions` - node\_redis client options. See [node\_redis](https://github.com/mranney/node_redis) documentation.
-* `callback` - function that takes an err parameter. Called when the instance is connected to the cluster, or cannot connect to any node.
 
-### cluster.getSlot(key)
+### client.getSlot(key)
 
 Returns the slot which will be used for a key.
 
-### cluster.getConenctionBySlot(slot, callback)
+### client.getConenctionBySlot(slot, callback)
 
 Get the node\_redis instance for a specific slot.
