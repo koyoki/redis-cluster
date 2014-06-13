@@ -1,0 +1,21 @@
+{
+  "name": "redis-cluster",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha --reporter spec"
+  },
+  "author": "",
+  "repository": "none",
+  "license": "BSD",
+  "dependencies": {
+    "redis": "~0.10.3"
+  },
+  "optionalDependencies": {
+    "hiredis": "~0.1.17"
+  },
+  "devDependencies": {
+    "expect.js": "~0.3.1"
+  }
+}
