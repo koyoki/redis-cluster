@@ -35,6 +35,8 @@ c.once("ready", function () {
     multi2.exec(function (err, res) {
         //err = Error("Multi comands must operate on the same slot!")
     });
+
+    c.PUBLISH("key1", "hello world!");
 });
 ```
 
@@ -70,6 +72,10 @@ This client will emit the error event if there is an error with the cluster libr
 #### redis\_error
 
 Error events emitted from the node\_redis library.
+
+#### message (channel, message)
+
+Client will emit `message` for every message received that matches an active subscription.
 
 ### cluster.createClient(port, host, options, [callback])
 

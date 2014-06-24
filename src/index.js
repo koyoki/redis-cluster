@@ -37,6 +37,9 @@ RedisCluster.prototype.getRedisLink = function (host, port, callback) {
         }
         self.emit("redis_error", err);
     });
+    client.on("message", function (channel, message) {
+        self.emit("message", channel, message);
+    });
 };
 
 RedisCluster.prototype.addNode = function (node) {

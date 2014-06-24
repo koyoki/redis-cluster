@@ -1,6 +1,6 @@
 {
   "name": "redis-party",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Redis client wrapper for clusters",
   "keywords": ["redis", "database", "cluster"],
   "main": "index.js",
