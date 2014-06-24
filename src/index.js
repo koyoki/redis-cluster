@@ -254,13 +254,13 @@ RedisCluster.prototype.bindCommands = function () {
             return;
         }
 
-        RedisCluster.prototype[command] = function () {
+        self[command] = function () {
             var args = Array.prototype.slice.call(arguments, 0);
             args.unshift(command);
             self.sendClusterCommand.apply(self, args);
         };
 
-        RedisCluster.prototype[command.toUpperCase()] = RedisCluster.prototype[command];
+        self[command.toUpperCase()] = self[command];
     });
 };
 
