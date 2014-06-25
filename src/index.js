@@ -15,7 +15,6 @@ function RedisCluster(nodes, redisOptions) {
     }
     this.connections = {};
     this.redisOptions = redisOptions;
-    this.bindCommands();
     this.initializeSlotsCache();
 
     events.EventEmitter.call(this);
@@ -246,23 +245,19 @@ RedisCluster.prototype.sendClusterCommand = function () {
     });
 };
 
-RedisCluster.prototype.bindCommands = function () {
-    var self = this;
+commands.forEach(function (command) {
+    if (command === "multi" || command === "exec") {
+        return;
+    }
 
-    commands.forEach(function (command) {
-        if (command === "multi" || command === "exec") {
-            return;
-        }
+    RedisCluster.prototype[command] = function () {
+        var args = Array.prototype.slice.call(arguments, 0);
+        args.unshift(command);
+        this.sendClusterCommand.apply(this, args);
+    };
 
-        self[command] = function () {
-            var args = Array.prototype.slice.call(arguments, 0);
-            args.unshift(command);
-            self.sendClusterCommand.apply(self, args);
-        };
-
-        self[command.toUpperCase()] = self[command];
-    });
-};
+    RedisCluster.prototype[command.toUpperCase()] = RedisCluster.prototype[command];
+});
 
 RedisCluster.prototype.multi = function () {
     return new Multi(this);
