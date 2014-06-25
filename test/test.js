@@ -65,7 +65,7 @@ describe("Redis Commands", function () {
                 expect(err).to.be(null);
                 expect(res).to.be("OK");
 
-                c.sendClusterCommand("GET", "foo", function (err, res) {
+                c.GET("foo", function (err, res) {
                     expect(err).to.be(null);
                     expect(res).to.be("bar");
                     done();
@@ -74,24 +74,35 @@ describe("Redis Commands", function () {
         });
 
         it("should set and get hashes", function (done) {
-            c.sendClusterCommand("HSET", "foo", "bar", "val", function (err, res) {
+            c.HSET("foo", "bar", "val", function (err, res) {
                 expect(err).to.be(null);
                 expect(res).to.be(1);
 
-                c.sendClusterCommand("HGET", "foo", "bar", function (err, res) {
+                c.HGET("foo", "bar", function (err, res) {
                     expect(err).to.be(null);
                     expect(res).to.be("val");
 
-                    c.sendClusterCommand("HDEL", "foo", "bar", function (err, res) {
+                    c.HDEL("foo", "bar", function (err, res) {
                         expect(err).to.be(null);
                         expect(res).to.be(1);
 
-                        c.sendClusterCommand("HGET", "foo", "bar", function (err, res) {
+                        c.HGET("foo", "bar", function (err, res) {
                             expect(err).to.be(null);
                             expect(res).to.be(null);
                             done();
                         });
                     });
+                });
+            });
+        });
+
+        it("should accept array arguments", function (done) {
+            c.SET("{1}foo", "bar", function () {
+                c.MGET(["{1}foo", "{1}test", "{1}bar"], function (err, res) {
+                    c.DEL("{1}foo");
+                    expect(err).to.be(null);
+                    expect(res.length).to.be(3);
+                    done();
                 });
             });
         });

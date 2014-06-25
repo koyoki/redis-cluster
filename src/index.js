@@ -6,6 +6,7 @@ var commands = require("./commands.js");
 var Multi = require("./multi.js");
 
 var hashSlots = 16384;
+var emptyCallback = function () {};
 
 function RedisCluster(nodes, redisOptions) {
     this.ready = false;
@@ -135,19 +136,6 @@ RedisCluster.prototype.getSlot = function (key) {
     return crc16(key) % hashSlots;
 };
 
-RedisCluster.prototype.getKeyFromCommand = function () {
-    var cmd = arguments[0].toLowerCase();
-    if (["info", "multi", "exec", "slaveof", "config", "shutdown"].indexOf(cmd) !== -1) {
-        return null;
-    } else {
-        var key = arguments[1];
-        if (Array.isArray(key)) {
-            return key[0];
-        }
-        return key;
-    }
-};
-
 RedisCluster.prototype.getRandomConnection = function (callback) {
     var self = this;
     var node = this.nodes.shift();
@@ -204,18 +192,18 @@ RedisCluster.prototype.getConnection = function (node, callback) {
     }
 };
 
-RedisCluster.prototype.sendClusterCommand = function () {
-    var args = Array.prototype.slice.call(arguments, 0);
+RedisCluster.prototype.sendClusterCommand = function (command, args, callback) {
     var self = this;
     if (this.refreshTable) {
         this.initializeSlotsCache();
         this.once("ready", function () {
-            self.sendClusterCommand.apply(self, args);
+            var argsArray = Array.prototype.slice.call(arguments, 0);
+            self.sendClusterCommand.apply(self, argsArray);
         });
         return;
     }
 
-    var key = this.getKeyFromCommand.apply(this, args);
+    var key = args[0];
     var slot = this.getSlot(key);
     this.getConnectionBySlot(slot, function (err, conn) {
         if (err) {
@@ -223,25 +211,32 @@ RedisCluster.prototype.sendClusterCommand = function () {
             return;
         }
 
-        var callback = args[args.length - 1];
-        if (typeof callback === "function") {
-            args[args.length - 1] = function (err, res) {
-                if (err) {
-                    var parts = err.toString().split(" ");
-                    if (parts[1] === "MOVED" || parts[1] === "ASK") {
-                        self.refreshTable = true;
-                        self.sendClusterCommand.apply(self, args);
-                        return;
-                    }
-                    callback(err);
+        var cb = callback;
+        if (!cb) {
+            var lastArgType = typeof args[args.length - 1];
+            if (lastArgType === "function") {
+                cb = args.pop();
+            } else {
+                cb = emptyCallback;
+            }
+        }
+
+        callback = function (err, res) {
+            if (err) {
+                var parts = err.toString().split(" ");
+                if (parts[1] === "MOVED" || parts[1] === "ASK") {
+                    self.refreshTable = true;
+                    self.sendClusterCommand.apply(self, args);
                     return;
                 }
+                cb(err);
+                return;
+            }
 
-                callback(null, res);
-            };
-        }
-        var command = [args.shift(), args];
-        conn.send_command.apply(conn, command);
+            cb(null, res);
+        };
+
+        conn.send_command.call(conn, command, args, callback);
     });
 };
 
@@ -250,10 +245,13 @@ commands.forEach(function (command) {
         return;
     }
 
-    RedisCluster.prototype[command] = function () {
-        var args = Array.prototype.slice.call(arguments, 0);
-        args.unshift(command);
-        this.sendClusterCommand.apply(this, args);
+    RedisCluster.prototype[command] = function (args, callback) {
+        if (Array.isArray(args) && typeof callback === "function") {
+            this.sendClusterCommand(command, args, callback);
+        } else {
+            args = Array.prototype.slice.call(arguments, 0);
+            this.sendClusterCommand(command, args);
+        }
     };
 
     RedisCluster.prototype[command.toUpperCase()] = RedisCluster.prototype[command];

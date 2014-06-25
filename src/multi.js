@@ -3,43 +3,44 @@ var commands = require("./commands.js");
 function Multi(cluster) {
     this.cluster = cluster;
     this.buffer = [];
-
-    this.bindCommands();
 }
 
-Multi.prototype.bindCommands = function () {
-    var that = this;
+commands.forEach(function (command) {
+    if (command === "multi" || command === "exec") {
+        return;
+    }
 
-    commands.forEach(function (command) {
-        if (command === "multi" || command === "exec") {
+    Multi.prototype[command] = function (args, callback) {
+        if (this.invalid) {
+            return this;
+        }
+
+        //Check the slot is the same
+        var key = args;
+        if (Array.isArray(args)) {
+            key = args[0];
+        }
+
+        var slot = this.cluster.getSlot(key);
+        if (this.slot === undefined) {
+            this.slot = slot;
+        } else if (slot !== this.slot) {
+            this.invalid = true;
             return;
         }
 
-        Multi.prototype[command] = function () {
-            if (that.invalid) {
-                return this;
-            }
+        if (Array.isArray(args) && typeof callback === "function") {
+            this.buffer.push([command, args, callback]);
+        } else {
+            args = Array.prototype.slice.call(arguments, 0);
+            this.buffer.push([command, args]);
+        }
 
-            var args = Array.prototype.slice.call(arguments, 0);
-            args.unshift(command);
+        return this;
+    };
 
-            //Check the slot is the same
-            var key = that.cluster.getKeyFromCommand.apply(that.cluster, args);
-            var slot = that.cluster.getSlot(key);
-            if (that.slot === undefined) {
-                that.slot = slot;
-            } else if (slot !== that.slot) {
-                that.invalid = true;
-                return;
-            }
-
-            that.buffer.push(args);
-            return this;
-        };
-
-        Multi.prototype[command.toUpperCase()] = Multi.prototype[command];
-    });
-};
+    Multi.prototype[command.toUpperCase()] = Multi.prototype[command];
+});
 
 Multi.prototype.exec = function (callback) {
     if (this.invalid) {
