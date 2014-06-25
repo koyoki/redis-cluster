@@ -17,9 +17,9 @@ var nodes = [
     {"host": "node2.domain.com", "port": 10000},
     {"host": "node2.domain.com", "port": 10001},
 ];
-var cluster = require("redis-party");
+var redis = require("redis-party");
 
-var c = new cluster.Cluster(nodes, {"max_attempts": 5});
+var c = new redis.Cluster(nodes, {"max_attempts": 5});
 c.once("ready", function () {
     var multi = c.multi();
     multi.SET("hello", "world");
@@ -43,7 +43,7 @@ c.once("ready", function () {
 Alternative node\_redis compatible interface:
 
 ```javascript
-var client = cluster.createClient(port, host, options);
+var client = redis.createClient(port, host, options);
 client.SET("foo", "bar", function () {
     client.GET("foo", "bar", function (err, bar) {
         console.log("foo = " + bar);
