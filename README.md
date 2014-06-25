@@ -19,9 +19,11 @@ var nodes = [
 ];
 var redis = require("redis-party");
 
-var c = new redis.Cluster(nodes, {"max_attempts": 5});
-c.once("ready", function () {
-    var multi = c.multi();
+var cluster = new redis.Cluster(nodes, {"max_attempts": 5});
+cluster.once("ready", function () {
+    cluster.SET("hello", "planet");
+
+    var multi = cluster.multi();
     multi.SET("hello", "world");
     multi.GET("hello");
     multi.DEL("hello");
@@ -29,14 +31,14 @@ c.once("ready", function () {
         console.log("hello " + res[1]);
     });
 
-    var multi2 = c.multi();
+    var multi2 = cluster.multi();
     multi2.SET("key1", "val");
     multi2.SET("key2", "val");
     multi2.exec(function (err, res) {
         //err = Error("Multi comands must operate on the same slot!")
     });
 
-    c.PUBLISH("key1", "hello world!");
+    cluster.PUBLISH("key1", "hello world!");
 });
 ```
 
@@ -45,7 +47,7 @@ Alternative node\_redis compatible interface:
 ```javascript
 var client = redis.createClient(port, host, options);
 client.SET("foo", "bar", function () {
-    client.GET("foo", "bar", function (err, bar) {
+    client.GET("foo", function (err, bar) {
         console.log("foo = " + bar);
     });
 });
