@@ -263,6 +263,14 @@ RedisCluster.prototype.multi = function () {
     return new Multi(this);
 };
 
+RedisCluster.prototype.quit = function () {
+    for (var node in this.connections) {
+        if (this.connections.hasOwnProperty(node)) {
+            this.connections[node].quit();
+        }
+    }
+};
+
 exports.getSlot = function getSlot(key) {
     var s = key.indexOf("{");
     if (s !== -1) {

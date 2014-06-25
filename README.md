@@ -92,6 +92,10 @@ Create a new cluster instance. It will connect to the first available redis node
 * `nodes` - an array of objects with `host` and `port` properties.
 * `redisOptions` - node\_redis client options. See [node\_redis](https://github.com/mranney/node_redis) documentation.
 
+### client.quit()
+
+Cleanly end connections to all cluster nodes by sending the `QUIT` command after handling all replies.
+
 ### client.getSlot(key)
 
 Returns the slot which will be used for a key.
