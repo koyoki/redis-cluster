@@ -126,4 +126,21 @@ describe("Redis Commands", function () {
             });
         });
     });
+
+    describe("pubsub", function () {
+        it("should subscribe and publish to a channel", function (done) {
+            var c2 = new cluster.Cluster(nodes, redisOptions);
+            c2.once("ready", function () {
+                c2.once("message", function (channel, message) {
+                    expect(channel).to.be("foo");
+                    expect(message).to.be("bar");
+                    done();
+                });
+
+                c2.subscribe("foo", function () {
+                    c.publish("foo", "bar");
+                });
+            });
+        });
+    });
 });
