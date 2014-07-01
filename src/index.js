@@ -203,6 +203,13 @@ RedisCluster.prototype.sendClusterCommand = function (command, args, callback) {
         return;
     }
 
+    if (args === undefined) {
+        if (callback) {
+            callback(new Error("Missing arguments for command"));
+        }
+        return;
+    }
+
     var key = args[0];
     var slot = this.getSlot(key);
     this.getConnectionBySlot(slot, function (err, conn) {
