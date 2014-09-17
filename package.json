@@ -2,7 +2,11 @@
   "name": "redis-party",
   "version": "0.4.1",
   "description": "Redis client wrapper for clusters",
-  "keywords": ["redis", "database", "cluster"],
+  "keywords": [
+    "redis",
+    "database",
+    "cluster"
+  ],
   "main": "index.js",
   "scripts": {
     "test": "mocha --reporter spec"
@@ -14,7 +18,7 @@
   },
   "license": "BSD",
   "dependencies": {
-    "redis": "~0.10.3"
+    "redis": "^0.12.1"
   },
   "optionalDependencies": {
     "hiredis": "~0.1.17"
