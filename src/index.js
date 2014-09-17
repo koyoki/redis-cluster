@@ -73,7 +73,7 @@ RedisCluster.prototype.initializeSlotsCache = function () {
             return;
         }
 
-        r.cluster("nodes", function (err, res) {
+        r.cluster("slots", function (err, res) {
             r.quit();
 
             if (err) {
@@ -83,40 +83,23 @@ RedisCluster.prototype.initializeSlotsCache = function () {
             }
 
             self.refreshTable = false;
-            var lines = res.split("\n");
 
-            for (var i = 0; i < lines.length; ++i) {
-                if (lines[i].trim().length === 0) {
-                    continue;
-                }
-
-                //Add cluster nodes
-                var fields = lines[i].split(" ");
-                var addr = fields[1];
-                var parts = addr.split(":");
-                if (addr === ":0") {
+            res.forEach(function (slot) {
+                var master = slot[2];
+                var addr;
+                if (master[0] === "") {
                     addr = {"host": node.host, "port": node.port};
                 } else {
-                    addr = {"host": parts[0], "port": parts[1]};
+                    addr = {"host": master[0], "port": master[1]};
                 }
                 self.addNode(addr);
 
-                //Update slot mappings
-                var slots = fields.slice(8);
-                for (var j = 0; j < slots.length; ++j) {
-                    var range = slots[j];
-                    if (range[0] === "[") {
-                        continue;
-                    }
-
-                    parts = range.split("-");
-                    var first = parseInt(parts[0], 10);
-                    var last = parseInt(parts[1], 10) || first;
-                    for (var k = first; k < last; ++k) {
-                        self.slots[k] = addr;
-                    }
+                var slotStart = slot[0];
+                var slotEnd = slot[1];
+                for (var j = slotStart; j <= slotEnd; ++j) {
+                    self.slots[j] = addr;
                 }
-            }
+            });
 
             //console.log("Found " + self.nodes.length + " nodes in cluster");
             self.emit("ready");
