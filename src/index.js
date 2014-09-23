@@ -83,6 +83,7 @@ RedisCluster.prototype.initializeSlotsCache = function () {
             }
 
             self.refreshTable = false;
+            self.nodes = [];
 
             res.forEach(function (slot) {
                 var master = slot[2];
@@ -100,6 +101,11 @@ RedisCluster.prototype.initializeSlotsCache = function () {
                     self.slots[j] = addr;
                 }
             });
+
+            if (self.nodes.length === 0) {
+                self.emit("error", new Error("No nodes in cluster"));
+                return;
+            }
 
             //console.log("Found " + self.nodes.length + " nodes in cluster");
             self.emit("ready");
@@ -216,6 +222,7 @@ RedisCluster.prototype.sendClusterCommand = function (command, args, callback) {
                 var parts = err.toString().split(" ");
                 if (parts[1] === "MOVED" || parts[1] === "ASK") {
                     self.refreshTable = true;
+                    self.emit("clusterConfig");
                     self.sendClusterCommand.apply(self, args);
                     return;
                 }

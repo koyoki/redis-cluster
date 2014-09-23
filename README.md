@@ -79,6 +79,11 @@ Error events emitted from the node\_redis library.
 
 Client will emit `message` for every message received that matches an active subscription.
 
+#### clusterConfig
+
+This event is emitted when a cluster config change has been detected. The cluster slot-node mapping table will be re-initialized,
+and the `ready` event will be emitted again once that is done.
+
 ### cluster.createClient(port, host, options, [callback])
 
 Create a new cluster instance. It will connect to the specified redis node and discover the rest of the nodes from there.
