@@ -200,6 +200,11 @@ RedisCluster.prototype.sendClusterCommand = function (command, args, callback) {
     }
 
     var key = args[0];
+
+    if ((command === 'eval' || command === 'evalsha') && parseInt(args[1])>0) {
+        key = args[2];
+    }
+
     var slot = this.getSlot(key);
     this.getConnectionBySlot(slot, function (err, conn) {
         if (err) {
